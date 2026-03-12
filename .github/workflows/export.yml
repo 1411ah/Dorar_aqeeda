@@ -1,0 +1,41 @@
+name: Export Aqeeda
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_pages:
+        description: 'عدد صفحات للاختبار (0 = كامل)'
+        default: '0'
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install -r requirements.txt
+
+      - name: Run export
+        run: python dorar_aqeeda_export.py
+        env:
+          TEST_PAGES: ${{ github.event.inputs.test_pages }}
+
+      - name: Upload EPUB
+        uses: actions/upload-artifact@v4
+        with:
+          name: aqeeda-epub
+          path: output/aqeeda.epub
+          retention-days: 30
+
+      - name: Upload Markdown
+        uses: actions/upload-artifact@v4
+        with:
+          name: aqeeda-markdown
+          path: output/md/
+          retention-days: 30
