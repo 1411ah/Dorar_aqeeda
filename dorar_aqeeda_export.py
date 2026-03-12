@@ -136,39 +136,39 @@ def safe_name(s: str, maxlen: int = 80) -> str:
 # ── Discovery ─────────────────────────────────────────────────────────────────
 def discover_urls() -> list[str]:
     """
-    يبدأ من أصغر ID في الصفحة الرئيسية،
-    ثم يتتبع روابط "التالي" حتى النهاية.
+    يجمع كل IDs من صفحة الفهرس مباشرة (أكثر موثوقية من تتبع 'التالي').
+    ثم يرتبها بحسب ترتيب ظهورها في الفهرس للحفاظ على التسلسل الصحيح.
     """
     print(f"  جلب فهرس الروابط من {START_URL}…")
     index_soup = fetch(START_URL)
-    all_ids: set[int] = set()
-    if index_soup:
-        for a in index_soup.find_all("a", href=True):
-            m = PAGE_RE.search(a["href"])
-            if m:
-                all_ids.add(int(m.group(1)))
+    if not index_soup:
+        print("  [خطأ] لم يمكن جلب صفحة الفهرس")
+        return []
 
-    if not all_ids:
+    # جمع IDs بحسب ترتيب الظهور (مع إزالة المكررات)
+    seen_ids: set[int] = set()
+    ordered_ids: list[int] = []
+    for a in index_soup.find_all("a", href=True):
+        m = PAGE_RE.search(a["href"])
+        if m:
+            pid = int(m.group(1))
+            if pid not in seen_ids:
+                seen_ids.add(pid)
+                ordered_ids.append(pid)
+
+    if not ordered_ids:
         print("  [تحذير] لم يُعثر على روابط في صفحة الفهرس")
         return []
 
-    base = "https://dorar.net"
-    url  = f"{base}/aqeeda/{min(all_ids)}"
-    urls, seen = [], set()
+    print(f"  وُجد {len(ordered_ids)} رابط في الفهرس")
 
-    while url:
-        if url in seen:
-            break
-        seen.add(url)
-        urls.append(url)
-        print(f"  [{len(urls):>4}] {url}")
-        if TEST_PAGES and len(urls) >= TEST_PAGES:
-            break
-        time.sleep(DELAY)
-        soup = fetch(url)
-        if not soup:
-            break
-        url = _next_url(soup, url)
+    base = "https://dorar.net"
+    if TEST_PAGES:
+        ordered_ids = ordered_ids[:TEST_PAGES]
+
+    urls = [f"{base}/aqeeda/{pid}" for pid in ordered_ids]
+    for i, url in enumerate(urls, 1):
+        print(f"  [{i:>4}] {url}")
 
     return urls
 
