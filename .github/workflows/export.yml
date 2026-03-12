@@ -7,10 +7,15 @@ on:
         description: 'عدد صفحات للاختبار (0 = كامل)'
         default: '0'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   export:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -26,14 +31,22 @@ jobs:
         env:
           TEST_PAGES: ${{ github.event.inputs.test_pages }}
 
-      - name: Upload EPUB
+      - name: Commit output to repo
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add output/
+          git diff --cached --quiet || git commit -m "export: aqeeda $(date +'%Y-%m-%d %H:%M')"
+          git push
+
+      - name: Upload EPUB artifact
         uses: actions/upload-artifact@v4
         with:
           name: aqeeda-epub
           path: output/aqeeda.epub
           retention-days: 30
 
-      - name: Upload Markdown
+      - name: Upload Markdown artifact
         uses: actions/upload-artifact@v4
         with:
           name: aqeeda-markdown
