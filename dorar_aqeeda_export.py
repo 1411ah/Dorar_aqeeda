@@ -211,10 +211,10 @@ def extract_content(soup: BeautifulSoup, pid: str) -> tuple[str, list[tuple[str,
         body = cntnt
     body = BeautifulSoup(str(body), "html.parser")
 
-    # حذف روابط الشرح والتفسير
+    # حذف روابط الشرح والتفسير (unwrap يحافظ على النص)
     for a in body.find_all("a", href=True):
         if "/hadith/sharh/" in a["href"] or "/tafseer/" in a["href"]:
-            a.decompose()
+            a.unwrap()
 
     # حذف عناصر التنقل والزوائد
     for h3 in body.find_all("h3", id="more-titles"):
@@ -234,7 +234,9 @@ def extract_content(soup: BeautifulSoup, pid: str) -> tuple[str, list[tuple[str,
 
     for a in body.find_all("a"):
         if NAV_TEXT_RE.search(a.get_text()):
-            a.decompose()
+            a.decompose()   # روابط التنقل: نص زائد لا نريده
+        else:
+            a.unwrap()      # باقي الروابط: أزل الوسم وأبقِ النص
 
     # استخراج الهوامش
     footnotes: list[tuple[str, str]] = []
@@ -254,7 +256,7 @@ def extract_content(soup: BeautifulSoup, pid: str) -> tuple[str, list[tuple[str,
     for span in body.find_all("span"):
         cls = set(span.get("class", []))
         for a in span.find_all("a"):
-            a.decompose()
+            a.unwrap()   # يزيل وسم <a> ويُبقي النص
         txt = span.get_text(strip=True)
 
         if "aaya" in cls:
@@ -319,6 +321,8 @@ def _extract_article_content(soup: BeautifulSoup, pid: str) -> tuple[str, list]:
     for a in body.find_all("a"):
         if NAV_TEXT_RE.search(a.get_text()):
             a.decompose()
+        else:
+            a.unwrap()
     _normalize_article_html(body)
 
     footnotes: list[tuple[str, str]] = []
